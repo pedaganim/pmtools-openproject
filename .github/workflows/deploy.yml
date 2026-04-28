@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    name: Deploy to EC2 via SSM
+    name: Provision Infrastructure & Deploy App
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -22,29 +22,41 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          # Note: Replace AWS_ACCOUNT_ID with your actual AWS Account ID or set it as a GitHub Secret
+          # Note: The role needs extensive permissions (e.g., AdministratorAccess) to run terraform apply
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/github-actions-openproject-role
           aws-region: ap-southeast-2
 
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0" # or your preferred version
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        id: apply
+        run: terraform apply -auto-approve
+
+      - name: Get EC2 Instance ID
+        id: get_instance_id
+        run: |
+          INSTANCE_ID=$(terraform output -raw instance_id)
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_ENV"
+          echo "Found Target Instance: $INSTANCE_ID"
+
+      - name: Wait for SSM Agent
+        run: |
+          echo "Waiting for EC2 instance $instance_id to register with SSM..."
+          aws ssm wait instance-online --instance-ids "$instance_id" || true
+          # Sleep an additional 30 seconds to ensure the agent is ready to accept commands
+          sleep 30
+
       - name: Deploy OpenProject via AWS SSM
         run: |
-          # 1. Find the target EC2 Instance ID using its Name tag
-          INSTANCE_ID=$(aws ec2 describe-instances \
-            --filters "Name=tag:Name,Values=OpenProject-Server" "Name=instance-state-name,Values=running" \
-            --query "Reservations[*].Instances[*].InstanceId" \
-            --output text)
-            
-          if [ -z "$INSTANCE_ID" ]; then
-            echo "Error: No running instance found with tag Name=OpenProject-Server"
-            exit 1
-          fi
-          
-          echo "Found Target Instance: $INSTANCE_ID"
-          
-          # 2. Send the deployment commands via SSM RunShellScript
-          # This script will clone the official OpenProject compose repo if missing, pull latest images, and restart containers.
+          # Send the deployment commands via SSM RunShellScript
           COMMAND_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
+            --instance-ids "$instance_id" \
             --document-name "AWS-RunShellScript" \
             --parameters 'commands=["if [ ! -d /opt/openproject ]; then sudo git clone https://github.com/opf/openproject-docker-compose.git --depth=1 --branch=stable/14 /opt/openproject; fi", "cd /opt/openproject", "sudo cp -n .env.example .env || true", "sudo docker compose pull", "sudo OPENPROJECT_HOST__NAME=pmo.nearborrow.com.au OPENPROJECT_HTTPS=true docker compose up -d"]' \
             --query "Command.CommandId" \
@@ -52,12 +64,12 @@ jobs:
             
           echo "SSM Command sent. Command ID: $COMMAND_ID"
           
-          # 3. Wait for the command to finish executing
+          # Wait for the command to finish executing
           echo "Waiting for command execution to complete..."
-          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$instance_id"
           
-          # 4. Fetch and display the standard output and error
+          # Fetch and display the standard output and error
           echo "Deployment Output:"
-          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardOutputContent" --output text
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$instance_id" --query "StandardOutputContent" --output text
           echo "Deployment Errors (if any):"
-          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" --query "StandardErrorContent" --output text
+          aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$instance_id" --query "StandardErrorContent" --output text

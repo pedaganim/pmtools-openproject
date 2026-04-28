@@ -1,3 +1,12 @@
+terraform {
+  backend "s3" {
+    bucket         = "pmo-terraform-state-967438331002"
+    key            = "openproject/terraform.tfstate"
+    region         = "ap-southeast-2"
+    dynamodb_table = "pmo-terraform-lock"
+  }
+}
+
 provider "aws" {
   region = "ap-southeast-2" # matching the other project's region
 }
@@ -117,6 +126,10 @@ resource "aws_instance" "openproject" {
 
 output "public_ip" {
   value = aws_instance.openproject.public_ip
+}
+
+output "instance_id" {
+  value = aws_instance.openproject.id
 }
 
 # --- IAM Role for EC2 (SSM) ---
