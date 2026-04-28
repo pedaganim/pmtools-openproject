@@ -93,7 +93,7 @@ resource "aws_iam_role_policy" "rds_scheduler_policy" {
 resource "aws_cloudwatch_event_rule" "start_rds" {
   name                = "openproject-start-rds"
   description         = "Start RDS instance on a schedule"
-  schedule_expression = "cron(${var.schedule_start_cron})"
+  schedule_expression = "cron(${var.schedule_start_cron_eb})"
 }
 
 resource "aws_cloudwatch_event_target" "start_rds_target" {
@@ -112,7 +112,7 @@ resource "aws_cloudwatch_event_target" "start_rds_target" {
 resource "aws_cloudwatch_event_rule" "stop_rds" {
   name                = "openproject-stop-rds"
   description         = "Stop RDS instance on a schedule"
-  schedule_expression = "cron(${var.schedule_stop_cron})"
+  schedule_expression = "cron(${var.schedule_stop_cron_eb})"
 }
 
 resource "aws_cloudwatch_event_target" "stop_rds_target" {
