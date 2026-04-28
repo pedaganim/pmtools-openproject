@@ -131,6 +131,10 @@ docker compose rm -f db
 EOF
   )
 
+  instance_market_options {
+    market_type = "spot"
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags = {
@@ -151,14 +155,10 @@ resource "aws_autoscaling_group" "openproject_asg" {
     version = "$Latest"
   }
 
-  instance_market_options {
-    market_type = "spot"
-  }
-
   instance_refresh {
     strategy = "Rolling"
     preferences {
-      min_healthy_percentage = 0 # Since max size is 1, we must allow 0 to replace it
+      min_healthy_percentage = 0
     }
   }
 
