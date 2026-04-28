@@ -58,7 +58,7 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$instance_id" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["if [ ! -d /opt/openproject ]; then sudo git clone https://github.com/opf/openproject-docker-compose.git --depth=1 --branch=stable/14 /opt/openproject; fi", "cd /opt/openproject", "sudo cp -n .env.example .env || true", "sudo docker compose pull", "sudo PORT=80 OPENPROJECT_HOST__NAME=pmo.nearborrow.com.au OPENPROJECT_HTTPS=true docker compose up -d"]' \
+            --parameters 'commands=["if [ ! -d /opt/openproject ]; then sudo git clone https://github.com/opf/openproject-docker-compose.git --depth=1 --branch=stable/14 /opt/openproject; fi", "cd /opt/openproject", "sudo cp -n .env.example .env || true", "sudo sed -i \"/^PORT=/d\" .env", "echo \"PORT=80\" | sudo tee -a .env", "sudo sed -i \"/^OPENPROJECT_HOST__NAME=/d\" .env", "echo \"OPENPROJECT_HOST__NAME=pmo.nearborrow.com.au\" | sudo tee -a .env", "sudo sed -i \"/^OPENPROJECT_HTTPS=/d\" .env", "echo \"OPENPROJECT_HTTPS=true\" | sudo tee -a .env", "sudo docker compose pull", "sudo docker compose up -d"]' \
             --query "Command.CommandId" \
             --output text)
             
