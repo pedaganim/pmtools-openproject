@@ -99,12 +99,12 @@ resource "aws_cloudwatch_event_rule" "start_rds" {
 resource "aws_cloudwatch_event_target" "start_rds_target" {
   rule      = aws_cloudwatch_event_rule.start_rds.name
   target_id = "StartRDS"
-  arn       = "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-StartRdsInstance"
+  arn       = "arn:aws:ssm:${data.aws_region.current.name}::automation-definition/AWS-StartRdsInstance:$DEFAULT"
   role_arn  = aws_iam_role.rds_scheduler_role.arn
 
   input = jsonencode({
-    InstanceId           = aws_db_instance.openproject_db.identifier
-    AutomationAssumeRole = aws_iam_role.rds_scheduler_role.arn
+    InstanceId           = [aws_db_instance.openproject_db.identifier]
+    AutomationAssumeRole = [aws_iam_role.rds_scheduler_role.arn]
   })
 }
 
@@ -118,12 +118,12 @@ resource "aws_cloudwatch_event_rule" "stop_rds" {
 resource "aws_cloudwatch_event_target" "stop_rds_target" {
   rule      = aws_cloudwatch_event_rule.stop_rds.name
   target_id = "StopRDS"
-  arn       = "arn:aws:ssm:${data.aws_region.current.name}::document/AWS-StopRdsInstance"
+  arn       = "arn:aws:ssm:${data.aws_region.current.name}::automation-definition/AWS-StopRdsInstance:$DEFAULT"
   role_arn  = aws_iam_role.rds_scheduler_role.arn
 
   input = jsonencode({
-    InstanceId           = aws_db_instance.openproject_db.identifier
-    AutomationAssumeRole = aws_iam_role.rds_scheduler_role.arn
+    InstanceId           = [aws_db_instance.openproject_db.identifier]
+    AutomationAssumeRole = [aws_iam_role.rds_scheduler_role.arn]
   })
 }
 
