@@ -3,7 +3,6 @@ terraform {
     bucket         = "pmo-terraform-state-967438331002"
     key            = "openproject/terraform.tfstate"
     region         = "ap-southeast-2"
-    dynamodb_table = "pmo-terraform-lock"
   }
 }
 
