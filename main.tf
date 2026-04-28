@@ -29,14 +29,6 @@ resource "aws_security_group" "openproject_sg" {
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
     description = "HTTP"
     from_port   = 80
     to_port     = 80
@@ -60,12 +52,6 @@ resource "aws_security_group" "openproject_sg" {
   }
 }
 
-# SSH Key Pair
-resource "aws_key_pair" "openproject_key" {
-  key_name   = "openproject-key"
-  public_key = file("${path.module}/openproject-key.pub")
-}
-
 # Get latest Ubuntu 22.04 AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
@@ -87,7 +73,6 @@ data "aws_ami" "ubuntu" {
 resource "aws_instance" "openproject" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = "t3.large"
-  key_name      = aws_key_pair.openproject_key.key_name
   
   vpc_security_group_ids = [aws_security_group.openproject_sg.id]
   subnet_id              = data.aws_subnets.default.ids[0]
