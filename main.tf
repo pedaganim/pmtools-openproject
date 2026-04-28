@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket         = "pmo-terraform-state-967438331002"
-    key            = "openproject/terraform.tfstate"
-    region         = "ap-southeast-2"
+    bucket = "pmo-terraform-state-967438331002"
+    key    = "openproject/terraform.tfstate"
+    region = "ap-southeast-2"
   }
 }
 
@@ -69,51 +69,16 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"] # Canonical
 }
 
-# EC2 Instance
-resource "aws_instance" "openproject" {
-  ami           = data.aws_ami.ubuntu.id
-  instance_type = "t3.large"
-  
-  vpc_security_group_ids = [aws_security_group.openproject_sg.id]
-  subnet_id              = data.aws_subnets.default.ids[0]
-  iam_instance_profile   = aws_iam_instance_profile.openproject_profile.name
-
-  root_block_device {
-    volume_size = 50
-    volume_type = "gp3"
-  }
-
-  user_data = <<-EOF
-              #!/bin/bash
-              apt-get update
-              apt-get install -y ca-certificates curl gnupg
-              install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              chmod a+r /etc/apt/keyrings/docker.gpg
-
-              echo \
-                "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-                "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-                tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-              apt-get update
-              apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-              systemctl enable docker
-              systemctl start docker
-              usermod -aG docker ubuntu
-              EOF
-
-  tags = {
-    Name = "OpenProject-Server"
-  }
-}
-
 output "public_ip" {
-  value = aws_instance.openproject.public_ip
+  value = aws_eip.openproject_eip.public_ip
 }
 
-output "instance_id" {
-  value = aws_instance.openproject.id
+output "rds_endpoint" {
+  value = aws_db_instance.openproject_db.endpoint
+}
+
+output "s3_bucket" {
+  value = aws_s3_bucket.openproject_attachments.bucket
 }
 
 # --- IAM Role for EC2 (SSM) ---
