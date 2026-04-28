@@ -1,0 +1,6 @@
+.env
+.terraform/
+.terraform.lock.hcl
+openproject-key
+openproject-key.pub
+openproject-compose/
